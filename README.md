@@ -12,7 +12,9 @@
 
   <br />
 
-  <a href="[https://pypi.org/project/prompttrace/](https://pypi.org/project/prompttrace/0.1.0/)"><img src="https://img.shields.io/pypi/v/prompttrace?style=for-the-badge&logo=pypi&logoColor=C6F808&label=PyPI&color=111111" alt="PyPI" /></a>
+  <a href="https://pypi.org/project/prompttrace/">
+  <img src="https://img.shields.io/pypi/v/prompttrace?style=for-the-badge&logo=pypi&logoColor=C6F808&label=PyPI&color=111111" alt="PyPI" />
+</a>
   &nbsp;
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9+-111111?style=for-the-badge&logo=python&logoColor=C6F808" alt="Python" /></a>
   &nbsp;
