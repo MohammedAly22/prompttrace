@@ -32,13 +32,18 @@
     <a href="#-api-reference">API Reference</a>&nbsp;&nbsp;•&nbsp;&nbsp;
     <a href="#%EF%B8%8F-configuration">Configuration</a>
   </p>
-
   <br />
+  
+  
+
+  
 </div>
 
 ---
 
-<br />
+<img width="1920" height="1688" alt="screencapture-127-0-0-1-8777-2026-03-26-06_37_49" src="https://github.com/user-attachments/assets/d183dba6-8396-449f-b43d-18fc86ab8ca1" />
+
+---
 
 ## The Problem
 
@@ -128,6 +133,16 @@ Launch with `prompttrace` or `from prompttrace import dashboard; dashboard()`.
 | **Dashboard** | Stats cards, latency chart, status donut, model usage — filterable by experiment |
 | **Traces** | Full table of all logged calls with search, filter, delete, and CSV export |
 | **Compare** | Select two prompts → word-level diff highlighting with outputs side-by-side |
+
+
+<img width="1920" height="1688" alt="screencapture-127-0-0-1-8777-2026-03-26-06_37_49" src="https://github.com/user-attachments/assets/b01776a8-f6bf-4d4a-83d6-69ccefcdc2eb" />
+
+---
+<img width="1920" height="935" alt="screencapture-127-0-0-1-8777-2026-03-26-06_39_01" src="https://github.com/user-attachments/assets/908d7871-4e67-491d-8cc4-5cf22ef33b27" />
+
+---
+
+<img width="1920" height="1032" alt="screencapture-127-0-0-1-8777-2026-03-26-06_39_26" src="https://github.com/user-attachments/assets/b4bf8529-36b9-493b-b2ba-d04186bd4a51" />
 
 <br />
 
