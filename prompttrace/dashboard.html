@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptTrace</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --accent: #C6F808;
+      --accent-dim: #C6F80822;
+      --bg: #FFF;
+      --surface: #F8F8F8;
+      --surface-hover: #F0F0F0;
+      --border: #E8E8E8;
+      --border-light: #F0F0F0;
+      --text: #0A0A0A;
+      --text-sec: #6B6B6B;
+      --text-dim: #999;
+      --black: #0A0A0A;
+      --white: #FFF;
+      --green: #10B981;
+      --green-bg: #10B98115;
+      --red: #EF4444;
+      --red-bg: #EF444412;
+      --yellow: #F59E0B;
+      --yellow-bg: #F59E0B15;
+      --blue: #3B82F6;
+      --blue-bg: #3B82F615;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', -apple-system, sans-serif;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 2px 8px rgba(0, 0, 0, .06);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, .12);
+      --tr: 0.2s cubic-bezier(.4, 0, .2, 1)
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px
+    }
+
+    /* ── SPLASH ── */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: var(--white);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity .6s ease, visibility .6s ease
+    }
+
+    #splash.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none
+    }
+
+    #splash .splash-logo {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+      border-radius: 18px
+    }
+
+    #splash .splash-name {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -.5px;
+      margin-bottom: 28px
+    }
+
+    .loader {
+      display: flex;
+      gap: 8px
+    }
+
+    .loader span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: loaderBounce 1.2s ease-in-out infinite
+    }
+
+    .loader span:nth-child(2) {
+      animation-delay: .15s
+    }
+
+    .loader span:nth-child(3) {
+      animation-delay: .3s
+    }
+
+    @keyframes loaderBounce {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(.6);
+        opacity: .4
+      }
+
+      40% {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 32px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, .92);
+      backdrop-filter: blur(12px);
+      z-index: 100
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -.3px
+    }
+
+    .header-logo svg {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px
+    }
+
+    .header-nav {
+      display: flex;
+      gap: 2px
+    }
+
+    .nav-btn {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 7px 14px;
+      border-radius: 7px;
+      border: none;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-sec);
+      transition: all var(--tr)
+    }
+
+    .nav-btn:hover {
+      background: var(--surface);
+      color: var(--text)
+    }
+
+    .nav-btn.active {
+      background: var(--black);
+      color: var(--white)
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .header-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      padding: 4px 10px;
+      background: var(--surface);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      gap: 5px
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: livePulse 2s ease-in-out infinite
+    }
+
+    @keyframes livePulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: .3;
+        transform: scale(.7)
+      }
+    }
+
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 32px
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      letter-spacing: -.5px
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 24px
+    }
+
+    /* ── STAT CARDS ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 28px
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: all var(--tr);
+      position: relative;
+      overflow: hidden
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform .4s cubic-bezier(.4, 0, .2, 1)
+    }
+
+    .stat-card:hover::after {
+      transform: scaleX(1)
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--shadow)
+    }
+
+    .stat-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      margin-bottom: 12px
+    }
+
+    .stat-icon.ic-traces {
+      background: var(--accent-dim)
+    }
+
+    .stat-icon.ic-exp {
+      background: var(--blue-bg)
+    }
+
+    .stat-icon.ic-lat {
+      background: var(--yellow-bg)
+    }
+
+    .stat-icon.ic-ok {
+      background: var(--green-bg)
+    }
+
+    .stat-icon.ic-pr {
+      background: var(--surface);
+      border: 1px solid var(--border)
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      font-weight: 600
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: var(--mono);
+      margin-top: 2px;
+      line-height: 1.2
+    }
+
+    /* ── CHARTS ── */
+    .charts-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px
+    }
+
+    .charts-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px
+    }
+
+    .chart-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-sec);
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    .chart-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      padding: 2px 8px;
+      background: var(--bg);
+      border-radius: 4px
+    }
+
+    canvas {
+      width: 100% !important
+    }
+
+    .chart-tooltip {
+      position: fixed;
+      background: var(--black);
+      color: var(--white);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 300;
+      opacity: 0;
+      transition: opacity .15s;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, .3)
+    }
+
+    .chart-tooltip.visible {
+      opacity: 1
+    }
+
+    /* ── TABLE ── */
+    .table-wrap {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow-x: auto
+    }
+
+    .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 960px
+    }
+
+    .table-wrap thead th {
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--text-dim);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap
+    }
+
+    .table-wrap thead th:last-child {
+      padding-right: 20px
+    }
+
+    .table-wrap tbody tr {
+      transition: background var(--tr);
+      cursor: pointer
+    }
+
+    .table-wrap tbody tr:hover {
+      background: var(--surface)
+    }
+
+    .table-wrap tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-light);
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .table-wrap tbody td:last-child {
+      padding-right: 20px
+    }
+
+    .table-wrap tbody td.mono {
+      font-family: var(--mono);
+      font-size: 12px
+    }
+
+    .table-wrap tbody td.td-time {
+      min-width: 100px;
+      max-width: none;
+      overflow: visible;
+      white-space: nowrap;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-family: var(--mono)
+    }
+
+    .table-wrap tbody td.td-tokens {
+      min-width: 50px;
+      text-align: right
+    }
+
+    .table-wrap tbody tr:last-child td {
+      border-bottom: none
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px
+    }
+
+    .pill::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor
+    }
+
+    .pill-success {
+      background: var(--green-bg);
+      color: var(--green)
+    }
+
+    .pill-error {
+      background: var(--red-bg);
+      color: var(--red)
+    }
+
+    .pill-warning {
+      background: var(--yellow-bg);
+      color: var(--yellow)
+    }
+
+    .pill-info {
+      background: var(--blue-bg);
+      color: var(--blue)
+    }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      z-index: 200;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      backdrop-filter: blur(6px);
+      padding-top: 5vh;
+      overflow-y: auto
+    }
+
+    .modal-overlay.open {
+      display: flex
+    }
+
+    .modal {
+      background: var(--bg);
+      border-radius: 16px;
+      width: 92%;
+      max-width: 880px;
+      padding: 28px 32px 32px;
+      margin-bottom: 5vh;
+      box-shadow: var(--shadow-lg);
+      animation: modalSlide .3s cubic-bezier(.16, 1, .3, 1)
+    }
+
+    @keyframes modalSlide {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(.98)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1)
+      }
+    }
+
+    .modal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px
+    }
+
+    .modal-top h2 {
+      font-size: 17px;
+      font-weight: 700
+    }
+
+    .modal-close {
+      border: none;
+      background: var(--surface);
+      cursor: pointer;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--tr);
+      color: var(--text-sec)
+    }
+
+    .modal-close:hover {
+      background: var(--border);
+      color: var(--text)
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px
+    }
+
+    .detail-item {
+      padding: 12px 14px;
+      background: var(--surface);
+      border-radius: var(--radius-sm)
+    }
+
+    .detail-item .dl {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      font-weight: 600
+    }
+
+    .detail-item .dv {
+      font-size: 13px;
+      margin-top: 3px;
+      font-family: var(--mono);
+      word-break: break-all
+    }
+
+    .block-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin: 16px 0 6px
+    }
+
+    .code-block {
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      margin-bottom: 12px;
+      max-height: 220px;
+      overflow-y: auto;
+      border-left: 3px solid var(--accent)
+    }
+
+    .code-block.output {
+      border-left-color: var(--blue)
+    }
+
+    .code-block.error {
+      border-left-color: var(--red)
+    }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 16px 0 6px
+    }
+
+    .output-header .block-label {
+      margin: 0
+    }
+
+    .render-toggle {
+      border: none;
+      background: var(--black);
+      color: var(--white);
+      cursor: pointer;
+      padding: 2px 8px;
+      border-radius: 5px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--white);
+      transition: all var(--tr);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      line-height: 1.6
+    }
+
+    .render-toggle:hover {
+      background: var(--text-sec)
+    }
+
+    .render-toggle.active {
+      background: var(--accent);
+      color: var(--black)
+    }
+
+    .rendered-output {
+      background: var(--surface);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      max-height: 220px;
+      overflow-y: auto;
+      border-left: 3px solid var(--blue);
+      font-size: 13px;
+      line-height: 1.7
+    }
+
+    .rendered-output pre {
+      background: #EFEFEF;
+      border-radius: 6px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      margin: 8px 0
+    }
+
+    .rendered-output code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: #EFEFEF;
+      padding: 1px 5px;
+      border-radius: 3px
+    }
+
+    .rendered-output pre code {
+      background: none;
+      padding: 0
+    }
+
+    /* ── TOOLBAR ── */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .toolbar select,
+    .toolbar input[type="text"] {
+      padding: 7px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-family: var(--sans);
+      font-size: 13px;
+      transition: border-color var(--tr)
+    }
+
+    .toolbar select {
+      appearance: none;
+      padding-right: 32px;
+      background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23999' d='M5 7L1 3h8z'/%3E%3C/svg%3E") no-repeat right 10px center;
+      cursor: pointer
+    }
+
+    .toolbar select:focus,
+    .toolbar input:focus {
+      outline: none;
+      border-color: var(--accent)
+    }
+
+    .toolbar input[type="text"] {
+      width: 220px
+    }
+
+    .toolbar input::placeholder {
+      color: var(--text-dim)
+    }
+
+    .btn {
+      padding: 7px 16px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-family: var(--sans);
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all var(--tr);
+      white-space: nowrap
+    }
+
+    .btn-primary {
+      background: var(--black);
+      color: var(--white)
+    }
+
+    .btn-primary:hover {
+      opacity: .85
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--text-sec);
+      border: 1px solid var(--border)
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface-hover);
+      color: var(--text)
+    }
+
+    .btn-danger {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid transparent
+    }
+
+    .btn-danger:hover {
+      background: var(--red);
+      color: var(--white)
+    }
+
+    .toolbar .spacer {
+      flex: 1
+    }
+
+    /* ── COMPARE ── */
+    .compare-selectors {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: end;
+      flex-wrap: wrap
+    }
+
+    .compare-selectors .sel-group {
+      flex: 1;
+      min-width: 200px
+    }
+
+    .compare-selectors .sel-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 4px
+    }
+
+    .compare-selectors select {
+      width: 100%;
+      padding: 9px 32px 9px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-family: var(--sans);
+      font-size: 13px;
+      background: var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%23999' d='M5 7L1 3h8z'/%3E%3C/svg%3E") no-repeat right 10px center;
+      appearance: none
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px
+    }
+
+    .compare-col {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: box-shadow var(--tr)
+    }
+
+    .compare-col:hover {
+      box-shadow: var(--shadow)
+    }
+
+    .compare-col h3 {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .compare-col h3 .hash {
+      font-family: var(--mono);
+      font-weight: 400;
+      color: var(--text-dim);
+      font-size: 11px
+    }
+
+    .diff-add {
+      background: #C6F80830;
+      border-radius: 2px;
+      padding: 0 2px
+    }
+
+    .diff-del {
+      background: #EF444420;
+      text-decoration: line-through;
+      border-radius: 2px;
+      padding: 0 2px
+    }
+
+    .metric-delta {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px
+    }
+
+    .metric-delta.positive {
+      background: var(--green-bg);
+      color: var(--green)
+    }
+
+    .metric-delta.negative {
+      background: var(--red-bg);
+      color: var(--red)
+    }
+
+    .metric-delta.neutral {
+      background: var(--surface);
+      color: var(--text-dim)
+    }
+
+    /* ── MISC ── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px
+    }
+
+    .empty-state .empty-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: var(--surface);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 14px
+    }
+
+    .empty-state h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 16px
+    }
+
+    .empty-state code {
+      display: inline-block;
+      background: var(--surface);
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-family: var(--mono);
+      font-size: 12px
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -.2px
+    }
+
+    .section-count {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      background: var(--surface);
+      padding: 2px 8px;
+      border-radius: 4px
+    }
+
+    /* ── SCROLL ANIMATIONS ── */
+    .scroll-anim {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity .5s cubic-bezier(.16, 1, .3, 1), transform .5s cubic-bezier(.16, 1, .3, 1)
+    }
+
+    .scroll-anim.visible {
+      opacity: 1;
+      transform: translateY(0)
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .anim {
+      animation: fadeUp .4s cubic-bezier(.16, 1, .3, 1) both
+    }
+
+    .anim-d1 {
+      animation-delay: .04s
+    }
+
+    .anim-d2 {
+      animation-delay: .08s
+    }
+
+    .anim-d3 {
+      animation-delay: .12s
+    }
+
+    .anim-d4 {
+      animation-delay: .16s
+    }
+
+    .anim-d5 {
+      animation-delay: .20s
+    }
+
+    .anim-d6 {
+      animation-delay: .24s
+    }
+
+    @media(max-width:900px) {
+      .container {
+        padding: 16px
+      }
+
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .charts-row,
+      .charts-row-2,
+      .compare-grid {
+        grid-template-columns: 1fr
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .compare-selectors {
+        flex-direction: column
+      }
+
+      .header {
+        padding: 12px 16px
+      }
+    }
+
+    @media(max-width:500px) {
+      .stats-row {
+        grid-template-columns: 1fr
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SPLASH SCREEN -->
+  <div id="splash">
+    <img class="splash-logo" src="/logo.png" alt="PromptTrace" width="80" height="80" style="border-radius:18px;">
+    <div class="splash-name">PromptTrace</div>
+    <div class="loader"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="chart-tooltip" id="tooltip"></div>
+
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">
+        <img src="/logo.png" alt="" width="30" height="30" style="border-radius:7px;">
+        <span>PromptTrace</span>
+      </div>
+      <div class="header-nav">
+        <button class="nav-btn active" onclick="showTab('dashboard')">Dashboard</button>
+        <button class="nav-btn" onclick="showTab('traces')">Traces</button>
+        <button class="nav-btn" onclick="showTab('compare')">Compare</button>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="header-badge"><span class="live-dot"></span>live</span>
+      <span class="header-badge">v0.1.0</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="tab-dashboard"></div>
+    <div id="tab-traces" style="display:none"></div>
+    <div id="tab-compare" style="display:none"></div>
+  </div>
+
+  <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const api = async p => (await fetch(p)).json();
+    let STATE = { traces: [], experiments: [], prompts: [], stats: {}, dashExpId: '' };
+    const ACCENT = '#C6F808';
+    const tooltip = $('tooltip');
+
+    // ── SPLASH ──
+    setTimeout(() => $('splash').classList.add('hidden'), 1400);
+    setTimeout(() => { const s = $('splash'); if (s) s.remove(); }, 2100);
+
+    // ── SCROLL OBSERVER ──
+    const scrollObs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); scrollObs.unobserve(e.target); } }); }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    function observeScrollAnims() { document.querySelectorAll('.scroll-anim:not(.visible)').forEach(el => scrollObs.observe(el)); }
+
+    // ── TOKEN ESTIMATION ──
+    function estTokens(text) { if (!text) return 0; return Math.ceil(text.length / 4); }
+
+    // ── TABS ──
+    function showTab(t) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase() === t));
+      ['dashboard', 'traces', 'compare'].forEach(x => $('tab-' + x).style.display = x === t ? '' : 'none');
+      ({ dashboard: loadDashboard, traces: loadTraces, compare: loadCompare })[t]();
+    }
+
+    function animVal(el, target, suffix = '', dur = 800) {
+      const isF = String(target).includes('.'); const t0 = performance.now();
+      !function tick(now) { const p = Math.min((now - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3); el.textContent = (isF ? (target * e).toFixed(1) : Math.round(target * e)) + suffix; if (p < 1) requestAnimationFrame(tick); }(t0);
+    }
+
+    // ══════════════ DASHBOARD ══════════════
+    async function loadDashboard() {
+      const eid = STATE.dashExpId;
+      const statsUrl = eid ? `/api/stats?experiment_id=${eid}` : '/api/stats';
+      const tracesUrl = eid ? `/api/traces?experiment_id=${eid}&limit=15` : '/api/traces?limit=15';
+      const [stats, exps, traces] = await Promise.all([api(statsUrl), api('/api/experiments'), api(tracesUrl)]);
+      STATE.stats = stats; STATE.experiments = exps;
+      const expName = eid ? exps.find(e => e.id == eid)?.name || '—' : 'All Experiments';
+
+      $('tab-dashboard').innerHTML = `
+    <div class="page-title anim">Dashboard</div>
+    <div class="page-subtitle anim anim-d1">Overview · <strong>${esc(expName)}</strong></div>
+    <div class="toolbar anim anim-d1">
+      <select id="dash-exp" onchange="STATE.dashExpId=this.value;loadDashboard()">
+        <option value="">All Experiments</option>
+        ${exps.map(e => `<option value="${e.id}" ${e.id == eid ? 'selected' : ''}>${esc(e.name)} (${e.trace_count})</option>`).join('')}
+      </select>
+      <div class="spacer"></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card scroll-anim"><div class="stat-icon ic-traces">📊</div><div class="stat-label">Total Traces</div><div class="stat-value" data-c="${stats.total_traces}">0</div></div>
+      <div class="stat-card scroll-anim"><div class="stat-icon ic-exp">🧪</div><div class="stat-label">Experiments</div><div class="stat-value" data-c="${stats.total_experiments}">0</div></div>
+      <div class="stat-card scroll-anim"><div class="stat-icon ic-lat">⏱</div><div class="stat-label">Avg Latency</div><div class="stat-value" data-c="${Math.round(stats.avg_latency)}" data-s=" ms">0</div></div>
+      <div class="stat-card scroll-anim"><div class="stat-icon ic-ok">✓</div><div class="stat-label">Success Rate</div><div class="stat-value" data-c="${stats.success_rate}" data-s="%" data-f="1">0</div></div>
+      <div class="stat-card scroll-anim"><div class="stat-icon ic-pr">🔤</div><div class="stat-label">Unique Prompts</div><div class="stat-value" data-c="${stats.unique_prompts}">0</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card scroll-anim"><div class="chart-header"><div class="chart-title">Latency Timeline</div><div class="chart-badge">last ${stats.latency_timeline.length}</div></div><canvas id="c-lat" height="180"></canvas></div>
+      <div class="chart-card scroll-anim"><div class="chart-header"><div class="chart-title">Status</div><div class="chart-badge">${stats.total_traces} total</div></div><canvas id="c-sts" height="220"></canvas></div>
+    </div>
+    <div class="charts-row-2">
+      <div class="chart-card scroll-anim"><div class="chart-header"><div class="chart-title">Models</div></div><canvas id="c-mdl" height="160"></canvas></div>
+      <div class="chart-card scroll-anim"><div class="chart-header"><div class="chart-title">Experiments</div></div><canvas id="c-exp" height="160"></canvas></div>
+    </div>
+    <div class="section-header scroll-anim"><div class="section-title">Recent Traces</div><div class="section-count">${traces.length}</div></div>
+    <div class="scroll-anim" id="dash-table">${buildTbl(traces)}</div>`;
+
+      observeScrollAnims();
+      setTimeout(() => { document.querySelectorAll('[data-c]').forEach(el => { animVal(el, parseFloat(el.dataset.c), el.dataset.s || ''); }); }, 200);
+      requestAnimationFrame(() => { drawLine(stats.latency_timeline); drawDonut(stats.status_dist); drawHBar(stats.model_dist, 'c-mdl'); drawVBar(exps, 'c-exp'); });
+    }
+
+    // ══════════════ TRACES ══════════════
+    async function loadTraces() {
+      const exps = await api('/api/experiments'); STATE.experiments = exps;
+      $('tab-traces').innerHTML = `
+    <div class="page-title anim">Traces</div>
+    <div class="page-subtitle anim anim-d1">All logged LLM calls</div>
+    <div class="toolbar anim anim-d2">
+      <select id="f-exp" onchange="filt();toggleDelBtn()"><option value="">All experiments</option>${exps.map(e => `<option value="${e.id}">${esc(e.name)} (${e.trace_count})</option>`).join('')}</select>
+      <input type="text" id="f-q" placeholder="Search prompts…" oninput="filt()">
+      <div class="spacer"></div>
+      <button class="btn btn-ghost" onclick="csv()">Export CSV</button>
+      <button class="btn btn-danger" id="del-exp-btn" onclick="delExp()" style="display:none">Delete Experiment</button>
+    </div>
+    <div id="t-wrap" class="anim anim-d3"></div>`;
+      filt();
+    }
+
+    async function filt() {
+      const eid = $('f-exp')?.value || '', q = ($('f-q')?.value || '').toLowerCase();
+      let t = await api(eid ? `/api/traces?experiment_id=${eid}` : '/api/traces');
+      if (q) t = t.filter(x => x.prompt_template.toLowerCase().includes(q) || x.output.toLowerCase().includes(q) || x.model.toLowerCase().includes(q) || x.experiment_name.toLowerCase().includes(q));
+      STATE.traces = t; $('t-wrap').innerHTML = buildTbl(t);
+    }
+
+    function toggleDelBtn() { const btn = $('del-exp-btn'); const sel = $('f-exp'); if (btn && sel) btn.style.display = sel.value ? 'inline-flex' : 'none'; }
+
+    async function delExp() {
+      const eid = $('f-exp')?.value; if (!eid) return;
+      const name = STATE.experiments.find(e => e.id == eid)?.name || '';
+      if (!confirm(`Delete experiment "${name}" and all its traces?`)) return;
+      await fetch(`/api/experiment/${eid}`, { method: 'DELETE' });
+      loadTraces();
+    }
+
+    function csv() {
+      if (!STATE.traces.length) return;
+      const h = 'id,experiment,prompt,model,status,latency_ms,approx_tokens,created_at';
+      const rows = STATE.traces.map(t => [t.id, t.experiment_name, '"' + t.prompt_template.replace(/"/g, '""') + '"', t.model, t.status, t.latency_ms, estTokens(t.output), t.created_at].join(','));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([h + '\n' + rows.join('\n')], { type: 'text/csv' })); a.download = 'prompttrace_' + Date.now() + '.csv'; a.click();
+    }
+
+    function buildTbl(traces) {
+      if (!traces.length) return `<div class="empty-state"><div class="empty-icon">📭</div><h3>No traces yet</h3><p>Start logging LLM calls to see them here.</p><code>from prompttrace import trace</code></div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>#</th><th>Experiment</th><th>Prompt</th><th>Output</th><th>Model</th><th>Status</th><th>Latency</th><th>≈ Tokens</th><th style="min-width:100px">Time</th></tr></thead><tbody>${traces.map(t => {
+        const tk = t.token_count_output || estTokens(t.output);
+        const st = (!t.output || t.output.trim() === '') ? 'error' : t.status;
+        return `<tr onclick="openTrace(${t.id})"><td class="mono" style="color:var(--text-dim)">${t.id}</td><td style="font-weight:600">${esc(t.experiment_name)}</td><td title="${esc(t.prompt_template)}">${esc(tr(t.prompt_template, 45))}</td><td style="color:var(--text-sec)" title="${esc(t.output)}">${t.output && t.output.trim() ? esc(tr(t.output, 35)) : '<span style="color:var(--red);font-style:italic">no output</span>'}</td><td class="mono">${esc(t.model)}</td><td>${pill(st)}</td><td class="mono">${Math.round(t.latency_ms)}<span style="color:var(--text-dim)">ms</span></td><td class="mono td-tokens">${tk}</td><td class="td-time">${ago(t.created_at)}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    }
+
+    // ══════════════ TRACE DETAIL ══════════════
+    async function openTrace(id) {
+      const t = await api('/api/trace/' + id);
+      const gp = jp(t.generation_params), iv = jp(t.input_variables), tags = jp(t.tags);
+      const tkIn = t.token_count_input || estTokens(t.prompt_template);
+      const tkOut = t.token_count_output || estTokens(t.output);
+      $('modal-content').innerHTML = `
+    <div class="modal-top"><h2>Trace #${t.id} — ${esc(t.experiment_name)}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="dl">Model</div><div class="dv">${esc(t.model)}</div></div>
+      <div class="detail-item"><div class="dl">Status</div><div class="dv">${pill(t.status)}</div></div>
+      <div class="detail-item"><div class="dl">Latency</div><div class="dv">${t.latency_ms.toFixed(1)} ms</div></div>
+      <div class="detail-item"><div class="dl">Hash</div><div class="dv">${t.prompt_hash}</div></div>
+      <div class="detail-item"><div class="dl">≈ Tokens In</div><div class="dv">${tkIn}</div></div>
+      <div class="detail-item"><div class="dl">≈ Tokens Out</div><div class="dv">${tkOut}</div></div>
+      <div class="detail-item"><div class="dl">Time</div><div class="dv">${t.created_at}</div></div>
+    </div>
+    ${Array.isArray(tags) && tags.length ? `<div class="block-label">Tags</div><div style="margin-bottom:12px;display:flex;gap:5px;flex-wrap:wrap">${tags.map(g => `<span style="font-family:var(--mono);font-size:11px;background:var(--surface);padding:3px 10px;border-radius:5px">${esc(g)}</span>`).join('')}</div>` : ''}
+    ${Object.keys(gp).length ? `<div class="block-label">Generation Parameters</div><div class="code-block">${esc(JSON.stringify(gp, null, 2))}</div>` : ''}
+    ${Object.keys(iv).length ? `<div class="block-label">Input Variables</div><div class="code-block">${esc(JSON.stringify(iv, null, 2))}</div>` : ''}
+    <div class="block-label">Prompt</div><div class="code-block">${esc(t.prompt_template)}</div>
+    <div class="output-header"><div class="block-label">Output</div><button class="render-toggle" id="render-btn" onclick="toggleRender()">&lt;/&gt;</button></div>
+    <div class="code-block output" id="output-raw">${esc(t.output)}</div>
+    <div class="rendered-output" id="output-rendered" style="display:none"></div>
+    ${t.error_message ? `<div class="block-label">Error</div><div class="code-block error">${esc(t.error_message)}</div>` : ''}
+    ${t.evals && t.evals.length ? `<div class="block-label">Eval Metrics</div><div class="detail-grid">${t.evals.map(e => `<div class="detail-item"><div class="dl">${esc(e.metric_name)}</div><div class="dv" style="font-size:20px;font-weight:700;color:var(--accent)">${e.metric_value.toFixed(3)}</div></div>`).join('')}</div>` : ''}`;
+      // Store raw output for rendering later
+      _lastOutput = t.output || '';
+      $('modal-overlay').classList.add('open');
+    }
+    function closeModal() { $('modal-overlay').classList.remove('open'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // ══════════════ COMPARE ══════════════
+    async function loadCompare() {
+      STATE.prompts = await api('/api/prompts'); const p = STATE.prompts;
+      if (p.length < 2) { $('tab-compare').innerHTML = `<div class="page-title anim">Compare</div><div class="page-subtitle anim anim-d1">Side-by-side prompt diff</div><div class="empty-state anim anim-d2"><div class="empty-icon">🔀</div><h3>Need at least 2 unique prompts</h3><p>Log different prompts to compare them.</p></div>`; return; }
+      $('tab-compare').innerHTML = `
+    <div class="page-title anim">Compare</div>
+    <div class="page-subtitle anim anim-d1">Side-by-side prompt diff with output comparison</div>
+    <div class="compare-selectors anim anim-d2">
+      <div class="sel-group"><label>Prompt A</label><select id="ca">${p.map((x, i) => `<option value="${x.prompt_hash}" ${i === 0 ? 'selected' : ''}>${esc(tr(x.prompt_template, 70))} (${x.run_count}×)</option>`).join('')}</select></div>
+      <div class="sel-group"><label>Prompt B</label><select id="cb">${p.map((x, i) => `<option value="${x.prompt_hash}" ${i === 1 ? 'selected' : ''}>${esc(tr(x.prompt_template, 70))} (${x.run_count}×)</option>`).join('')}</select></div>
+      <button class="btn btn-primary" onclick="cmp()" style="align-self:end;padding:9px 20px">Compare</button>
+    </div><div id="cmp-r"></div>`;
+    }
+
+    async function cmp() {
+      const a = $('ca').value, b = $('cb').value; if (a === b) return alert('Select two different prompts.');
+      const d = await api(`/api/compare?a=${a}&b=${b}`); const pa = d.a[0], pb = d.b[0]; if (!pa || !pb) return;
+      const diff = wDiff(pa.prompt_template, pb.prompt_template);
+      const ld = pb.latency_ms - pa.latency_ms, lp = pa.latency_ms ? ((ld / pa.latency_ms) * 100).toFixed(0) : '—';
+      $('cmp-r').innerHTML = `<div class="compare-grid">
+    <div class="compare-col scroll-anim"><h3>Prompt A <span class="hash">${pa.prompt_hash}</span></h3>
+      <div class="detail-grid" style="margin-bottom:14px"><div class="detail-item"><div class="dl">Model</div><div class="dv">${esc(pa.model)}</div></div><div class="detail-item"><div class="dl">Latency</div><div class="dv">${Math.round(pa.latency_ms)} ms</div></div><div class="detail-item"><div class="dl">Status</div><div class="dv">${pill(pa.status)}</div></div><div class="detail-item"><div class="dl">≈ Tokens</div><div class="dv">${estTokens(pa.output)}</div></div></div>
+      <div class="block-label">Prompt (diff)</div><div class="code-block">${diff.hA}</div>
+      <div class="block-label">Output</div><div class="code-block output">${esc(pa.output)}</div></div>
+    <div class="compare-col scroll-anim"><h3>Prompt B <span class="hash">${pb.prompt_hash}</span></h3>
+      <div class="detail-grid" style="margin-bottom:14px"><div class="detail-item"><div class="dl">Model</div><div class="dv">${esc(pb.model)}</div></div><div class="detail-item"><div class="dl">Latency</div><div class="dv">${Math.round(pb.latency_ms)} ms <span class="metric-delta ${ld > 0 ? 'negative' : ld < 0 ? 'positive' : 'neutral'}">${ld > 0 ? '↑' : ld < 0 ? '↓' : '='} ${Math.abs(ld).toFixed(0)}ms (${lp}%)</span></div></div><div class="detail-item"><div class="dl">Status</div><div class="dv">${pill(pb.status)}</div></div><div class="detail-item"><div class="dl">≈ Tokens</div><div class="dv">${estTokens(pb.output)}</div></div></div>
+      <div class="block-label">Prompt (diff)</div><div class="code-block">${diff.hB}</div>
+      <div class="block-label">Output</div><div class="code-block output">${esc(pb.output)}</div></div>
+  </div>`; observeScrollAnims();
+    }
+
+    // ══════════════ DIFF ══════════════
+    function wDiff(a, b) { const wa = a.split(/(\s+)/), wb = b.split(/(\s+)/), l = lcsW(wa, wb); let hA = '', hB = '', ia = 0, ib = 0, il = 0; while (ia < wa.length || ib < wb.length) { if (il < l.length && ia < wa.length && wa[ia] === l[il] && ib < wb.length && wb[ib] === l[il]) { hA += esc(wa[ia]); hB += esc(wb[ib]); ia++; ib++; il++; } else if (il < l.length && ib < wb.length && wb[ib] === l[il]) { hA += `<span class="diff-del">${esc(wa[ia])}</span>`; ia++; } else if (il < l.length && ia < wa.length && wa[ia] === l[il]) { hB += `<span class="diff-add">${esc(wb[ib])}</span>`; ib++; } else { if (ia < wa.length) { hA += `<span class="diff-del">${esc(wa[ia])}</span>`; ia++; } if (ib < wb.length) { hB += `<span class="diff-add">${esc(wb[ib])}</span>`; ib++; } } } return { hA, hB }; }
+    function lcsW(a, b) { const m = a.length, n = b.length; if (m > 500 || n > 500) return []; const d = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0)); for (let i = 1; i <= m; i++)for (let j = 1; j <= n; j++)d[i][j] = a[i - 1] === b[j - 1] ? d[i - 1][j - 1] + 1 : Math.max(d[i - 1][j], d[i][j - 1]); const r = []; let i = m, j = n; while (i > 0 && j > 0) { if (a[i - 1] === b[j - 1]) { r.unshift(a[i - 1]); i--; j--; } else if (d[i - 1][j] > d[i][j - 1]) i--; else j--; } return r; }
+
+    // ══════════════ CHARTS ══════════════
+    function sc(id, h) { const c = $(id); if (!c) return null; const ctx = c.getContext('2d'), dp = devicePixelRatio || 1, rc = c.getBoundingClientRect(), W = rc.width, H = h || 180; c.width = W * dp; c.height = H * dp; c.style.height = H + 'px'; ctx.scale(dp, dp); ctx.clearRect(0, 0, W, H); return { ctx, W, H, c }; }
+
+    function drawLine(data) {
+      if (!data.length) return; const s = sc('c-lat', 180); if (!s) return; const { ctx, W, H, c } = s;
+      const p = { t: 16, r: 16, b: 24, l: 44 }, v = data.map(d => d.latency), mx = Math.max(...v, 1) * 1.1;
+      const pw = (W - p.l - p.r) / (v.length - 1 || 1); const pts = v.map((val, i) => ({ x: p.l + i * pw, y: p.t + (H - p.t - p.b) * (1 - val / mx), v: val }));
+      let pr = 0; !function an() {
+        pr = Math.min(pr + .04, 1); const e = 1 - Math.pow(1 - pr, 3), dc = Math.ceil(pts.length * e); ctx.clearRect(0, 0, W, H);
+        ctx.strokeStyle = '#EBEBEB'; ctx.lineWidth = 1; for (let i = 0; i <= 4; i++) { const y = p.t + (H - p.t - p.b) * (1 - i / 4); ctx.beginPath(); ctx.moveTo(p.l, y); ctx.lineTo(W - p.r, y); ctx.stroke(); ctx.fillStyle = '#AAA'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right'; ctx.fillText(Math.round(mx * i / 4), p.l - 6, y + 3); }
+        const g = ctx.createLinearGradient(0, p.t, 0, H - p.b); g.addColorStop(0, '#C6F80835'); g.addColorStop(1, '#C6F80805'); ctx.beginPath(); ctx.moveTo(pts[0].x, H - p.b); for (let i = 0; i < dc; i++)ctx.lineTo(pts[i].x, pts[i].y); ctx.lineTo(pts[dc - 1].x, H - p.b); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+        ctx.beginPath(); for (let i = 0; i < dc; i++)i === 0 ? ctx.moveTo(pts[i].x, pts[i].y) : ctx.lineTo(pts[i].x, pts[i].y); ctx.strokeStyle = ACCENT; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+        for (let i = 0; i < dc; i++) { ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 3, 0, Math.PI * 2); ctx.fillStyle = ACCENT; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke(); }
+        if (pr < 1) requestAnimationFrame(an);
+      }();
+      c.onmousemove = e => { const r = c.getBoundingClientRect(), mx2 = e.clientX - r.left; let cl = null, md = Infinity; pts.forEach(pt => { const d = Math.abs(pt.x - mx2); if (d < md) { md = d; cl = pt; } }); if (cl && md < 30) { tooltip.textContent = cl.v.toFixed(1) + ' ms'; tooltip.style.left = (e.clientX + 12) + 'px'; tooltip.style.top = (e.clientY - 28) + 'px'; tooltip.classList.add('visible'); } else tooltip.classList.remove('visible'); };
+      c.onmouseleave = () => tooltip.classList.remove('visible');
+    }
+
+    function drawDonut(dist) {
+      const s = sc('c-sts', 220); if (!s) return; const { ctx, W, H } = s;
+      const cx = W / 2, cy = H / 2 - 8, R = 58, ri = 32;
+      const cl = { success: '#10B981', error: '#EF4444', warning: '#F59E0B', pending: '#3B82F6' };
+      const en = Object.entries(dist), tot = en.reduce((s, [, v]) => s + v, 0) || 1;
+      let pr = 0; !function an() {
+        pr = Math.min(pr + .035, 1); const e = 1 - Math.pow(1 - pr, 3); ctx.clearRect(0, 0, W, H);
+        let ang = -Math.PI / 2; en.forEach(([k, v]) => {
+          const sl = (v / tot) * Math.PI * 2 * e; ctx.beginPath(); ctx.arc(cx, cy, R, ang, ang + sl); ctx.arc(cx, cy, ri, ang + sl, ang, true); ctx.closePath(); ctx.fillStyle = cl[k] || '#888'; ctx.fill();
+          if (e > .5) { const mid = ang + sl / 2, lx = cx + Math.cos(mid) * (R + 24), ly = cy + Math.sin(mid) * (R + 24); ctx.globalAlpha = (e - .5) * 2; ctx.fillStyle = '#555'; ctx.font = '500 11px Space Grotesk'; ctx.textAlign = 'center'; ctx.fillText(k, lx, ly - 2); ctx.font = 'bold 11px JetBrains Mono'; ctx.fillText(v, lx, ly + 12); ctx.globalAlpha = 1; }
+          ang += sl;
+        });
+        ctx.fillStyle = '#0A0A0A'; ctx.font = 'bold 20px JetBrains Mono'; ctx.textAlign = 'center'; ctx.fillText(Math.round(tot * e), cx, cy + 3); ctx.fillStyle = '#999'; ctx.font = '10px Space Grotesk'; ctx.fillText('total', cx, cy + 16);
+        if (pr < 1) requestAnimationFrame(an);
+      }();
+    }
+
+    function drawHBar(dist, cid) {
+      const s = sc(cid, 160); if (!s) return; const { ctx, W, H } = s; const p = { t: 8, r: 16, b: 8, l: 110 }, en = Object.entries(dist).slice(0, 5); if (!en.length) return;
+      const mx = Math.max(...en.map(([, v]) => v), 1), bh = Math.min(22, (H - p.t - p.b) / en.length - 6); let pr = 0;
+      !function an() {
+        pr = Math.min(pr + .04, 1); const e = 1 - Math.pow(1 - pr, 3); ctx.clearRect(0, 0, W, H);
+        en.forEach(([k, v], i) => {
+          const y = p.t + i * (bh + 8), bw = (W - p.l - p.r) * (v / mx) * e; ctx.fillStyle = '#ECECEC'; ctx.beginPath(); rr(ctx, p.l, y, W - p.l - p.r, bh, 4); ctx.fill(); ctx.fillStyle = ACCENT; ctx.beginPath(); rr(ctx, p.l, y, Math.max(bw, 1), bh, 4); ctx.fill();
+          ctx.fillStyle = '#777'; ctx.font = '500 11px JetBrains Mono'; ctx.textAlign = 'right'; ctx.fillText(k.length > 14 ? k.slice(0, 14) + '…' : k, p.l - 8, y + bh / 2 + 4); if (e > .3) { ctx.fillStyle = '#333'; ctx.textAlign = 'left'; ctx.font = 'bold 11px JetBrains Mono'; ctx.globalAlpha = Math.min((e - .3) / .3, 1); ctx.fillText(Math.round(v * e), p.l + bw + 8, y + bh / 2 + 4); ctx.globalAlpha = 1; }
+        });
+        if (pr < 1) requestAnimationFrame(an);
+      }();
+    }
+
+    function drawVBar(exps, cid) {
+      const s = sc(cid, 160); if (!s) return; const { ctx, W, H } = s; const p = { t: 16, r: 12, b: 32, l: 12 }, it = exps.slice(0, 8); if (!it.length) return;
+      const mx = Math.max(...it.map(e => e.trace_count), 1), gap = 8; const bw = Math.min(44, (W - p.l - p.r - gap * (it.length - 1)) / it.length);
+      const tw = it.length * bw + (it.length - 1) * gap, sx = p.l + (W - p.l - p.r - tw) / 2; let pr = 0;
+      !function an() {
+        pr = Math.min(pr + .035, 1); const e = 1 - Math.pow(1 - pr, 3); ctx.clearRect(0, 0, W, H);
+        it.forEach((ex, i) => {
+          const x = sx + i * (bw + gap), fh = (H - p.t - p.b) * (ex.trace_count / mx), bh = fh * e, y = H - p.b - bh; ctx.fillStyle = i % 2 === 0 ? ACCENT : '#222'; ctx.beginPath(); rr(ctx, x, y, bw, Math.max(bh, 1), 4); ctx.fill();
+          ctx.fillStyle = '#888'; ctx.font = '500 10px Space Grotesk'; ctx.textAlign = 'center'; ctx.fillText(ex.name.length > 10 ? ex.name.slice(0, 10) + '…' : ex.name, x + bw / 2, H - p.b + 14);
+          if (e > .4) { ctx.fillStyle = '#333'; ctx.font = 'bold 11px JetBrains Mono'; ctx.globalAlpha = Math.min((e - .4) / .3, 1); ctx.fillText(Math.round(ex.trace_count * e), x + bw / 2, y - 5); ctx.globalAlpha = 1; }
+        });
+        if (pr < 1) requestAnimationFrame(an);
+      }();
+    }
+
+    function rr(c, x, y, w, h, r) { if (w < 2 * r) r = w / 2; if (h < 2 * r) r = h / 2; c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r); c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); }
+
+    // ══════════════ UTILS ══════════════
+    function esc(s) { return s ? String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : '' }
+    function tr(s, n) { return s && s.length > n ? s.slice(0, n) + '…' : (s || '') }
+    function pill(s) { const m = { success: 'pill-success', error: 'pill-error', warning: 'pill-warning', pending: 'pill-info' }; return `<span class="pill ${m[s] || 'pill-info'}">${s}</span>`; }
+    function ago(d) { const t = new Date(d + (d.includes('Z') ? '' : 'Z')), s = Math.floor((Date.now() - t) / 1000); if (s < 0) return 'just now'; if (s < 60) return s + 's ago'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; }
+    function jp(v) { if (!v) return {}; if (typeof v === 'object') return v; try { return JSON.parse(v) } catch { return {} } }
+
+    let _lastOutput = '';
+
+    function toggleRender() {
+      const raw = $('output-raw'), ren = $('output-rendered'), btn = $('render-btn');
+      if (!raw || !ren) return;
+      const showing = raw.style.display === 'none';
+      if (!showing && !ren.innerHTML) { ren.innerHTML = miniMd(_lastOutput); }
+      raw.style.display = showing ? '' : 'none';
+      ren.style.display = showing ? 'none' : '';
+      btn.classList.toggle('active', !showing);
+    }
+
+    function miniMd(s) {
+      if (!s) return '';
+      let h = esc(s);
+      // code blocks: ```lang\n...\n```
+      h = h.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => '<pre><code>' + code.trim() + '</code></pre>');
+      // inline code
+      h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+      // bold
+      h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // italic
+      h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
+      // headers
+      h = h.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+      h = h.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+      h = h.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+      // unordered lists
+      h = h.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+      h = h.replace(/(<li>.*<\/li>\n?)+/g, m => '<ul>' + m + '</ul>');
+      // numbered lists
+      h = h.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+      // paragraphs: double newlines
+      h = h.replace(/\n\n/g, '</p><p>');
+      // single newlines inside text (not after block elements)
+      h = h.replace(/([^>])\n([^<])/g, '$1<br>$2');
+      return h;
+    }
+
+    // ══════════════ REAL-TIME POLLING ══════════════
+    let _pollTimer = null, _lastCount = 0, _currentTab = 'dashboard';
+    function startPoll() { stopPoll(); _pollTimer = setInterval(pollUp, 2000); }
+    function stopPoll() { if (_pollTimer) { clearInterval(_pollTimer); _pollTimer = null; } }
+    async function pollUp() {
+      try {
+        const eid = STATE.dashExpId;
+        const stats = await api(eid && _currentTab === 'dashboard' ? `/api/stats?experiment_id=${eid}` : '/api/stats');
+        if (stats.total_traces === _lastCount) return; _lastCount = stats.total_traces;
+        if (_currentTab === 'dashboard') {
+          document.querySelectorAll('[data-c]').forEach((el, i) => {
+            const nv = [stats.total_traces, stats.total_experiments, Math.round(stats.avg_latency), stats.success_rate, stats.unique_prompts][i];
+            if (nv !== undefined && parseFloat(el.dataset.c) !== nv) { el.dataset.c = nv; animVal(el, nv, el.dataset.s || ''); }
+          });
+          STATE.stats = stats; const exps = await api('/api/experiments'); STATE.experiments = exps;
+          drawLine(stats.latency_timeline); drawDonut(stats.status_dist); drawHBar(stats.model_dist, 'c-mdl'); drawVBar(exps, 'c-exp');
+          const tUrl = eid ? `/api/traces?experiment_id=${eid}&limit=15` : '/api/traces?limit=15';
+          const traces = await api(tUrl); const dt = $('dash-table'); if (dt) dt.innerHTML = buildTbl(traces);
+          const sc2 = document.querySelector('#tab-dashboard .section-count'); if (sc2) sc2.textContent = traces.length;
+        } else if (_currentTab === 'traces') { filt(); }
+      } catch (e) { }
+    }
+    const _origShow = showTab; showTab = function (t) { _currentTab = t; _origShow(t); startPoll(); };
+
+    // ══════════════ INIT ══════════════
+    loadDashboard(); startPoll();
+  </script>
+</body>
+
+</html>

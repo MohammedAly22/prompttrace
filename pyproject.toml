@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prompttrace"
+version = "0.1.0"
+description = "Lightweight prompt versioning & evaluation tracker for LLM engineers. Track every prompt change, measure impact, compare side-by-side."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Mohammed Aly", email = "mohammeda.ebrahim22@gmail.com"},
+]
+keywords = ["llm", "prompt-engineering", "evaluation", "tracking", "ai-tools"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+prompttrace = "prompttrace.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/mohammedaly22/prompttrace"
+Documentation = "https://github.com/mohammedaly22/prompttrace#readme"
+Repository = "https://github.com/mohammedaly22/prompttrace"
+Issues = "https://github.com/mohammedaly22/prompttrace/issues"
+
+[tool.setuptools.packages.find]
+include = ["prompttrace*"]
+
+[tool.setuptools.package-data]
+prompttrace = ["dashboard.html", "logo.png"]
